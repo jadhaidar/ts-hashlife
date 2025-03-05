@@ -1,0 +1,29 @@
+{
+  "name": "ts-hashlife",
+  "version": "0.0.1",
+  "description": "Efficient TypeScript implementation of HashLife, an optimized algorithm for simulating Conway's Game of Life with memoization and quadtree-based compression.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jadhaidar/ts-hashlife"
+  },
+  "author": "Jad Haidar <18439122+jadhaidar@users.noreply.github.com>",
+  "keywords": [
+    "hashlife",
+    "game-of-life",
+    "typescript"
+  ],
+  "license": "BSD-2-Clause",
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "typescript": "^5.8.2"
+  }
+}

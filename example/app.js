@@ -224,7 +224,7 @@ function setupCanvasInteractions() {
 }
 
 function handleWindowResize() {
-  drawer.set_size(window.innerWidth, window.innerWidth);
+  drawer.set_size(window.innerWidth, window.innerHeight);
   requestAnimationFrame(() => lazyRedraw(life.root));
 }
 

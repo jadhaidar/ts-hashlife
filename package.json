@@ -1,6 +1,6 @@
 {
   "name": "ts-hashlife",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Efficient TypeScript implementation of HashLife, an optimized algorithm for simulating Conway's Game of Life with memoization and quadtree-based compression.",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -18,8 +18,8 @@
   ],
   "scripts": {
     "clean": "rimraf dist browser",
-    "build:esm": "tsc",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc && tsc-alias",
+    "build:cjs": "tsc -p tsconfig.cjs.json && tsc-alias -p tsconfig.cjs.json",
     "build:browser": "esbuild src/index.ts --bundle --minify --sourcemap --target=es2015 --global-name=HashLife --outfile=browser/hashlife.min.js",
     "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:browser",
     "prepublishOnly": "npm run build"
@@ -28,6 +28,7 @@
     "@types/node": "^22.13.9",
     "esbuild": "^0.25.0",
     "rimraf": "^6.0.1",
+    "tsc-alias": "^1.8.11",
     "typescript": "^5.8.2"
   },
   "repository": {

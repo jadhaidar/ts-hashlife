@@ -2,17 +2,20 @@
   "compilerOptions": {
     "strict": true,
     "declaration": true,
-    "outDir": "dist",
-    "module": "CommonJS",
-    "target": "ES6",
-    "lib": ["ES6", "DOM"],
-    "moduleResolution": "Node",
+    "outDir": "./dist/esm",
+    "module": "ESNext",
+    "target": "ES2015",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
 
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]
     }
   },
-  "include": ["src"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.test.ts"]
 }

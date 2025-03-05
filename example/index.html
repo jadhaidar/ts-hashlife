@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ts-hashlife - Game of Life Example</title>
   <style>
     body {
@@ -23,7 +23,7 @@
     }
 
     #hud {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       right: 0;
@@ -63,41 +63,62 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-wrap: wrap;
       padding: 16px;
-      gap: 16px;
+      gap: 8px;
+      z-index: 1;
     }
 
     button {
       background-color: #1c1c1c;
       color: white;
-      padding: 8px 24px;
+      padding: 8px 16px;
       border: none;
       border-radius: 2px;
       cursor: pointer;
       transition: background-color 0.2s;
     }
 
+    @media (min-width: 768px) {
+      button {
+        padding: 8px 24px;
+      }
+    }
+
     button:hover {
       background-color: #333;
     }
 
-    #start-btn {
+    #toggle-btn {
       background-color: #334155;
     }
 
-    #start-btn:hover {
+    #toggle-btn:hover {
       background-color: #475569;
     }
 
     .description {
       position: fixed;
-      bottom: 70px;
+      top: 56px;
       left: 0;
       right: 0;
       text-align: center;
       color: #ccc;
       font-size: 12px;
-      padding: 10px;
+      padding: 8px 12px;
+      z-index: 10;
+    }
+
+    .description>p {
+      max-width: 64ch;
+      margin-inline: auto;
+      margin-block: 8px;
+    }
+
+    @media (min-width: 768px) {
+      .description {
+        top: 36px;
+      }
     }
 
     .description a {
@@ -124,17 +145,19 @@
   </div>
 
   <div class="description">
-    This is an example implementation of <a href="https://github.com/jadhaidar/ts-hashlife"
-      target="_blank">ts-hashlife</a>, a TypeScript implementation of HashLife algorithm for Conway's Game of Life
+    <p>
+      This is an example implementation of <a href="https://github.com/jadhaidar/ts-hashlife"
+        target="_blank">ts-hashlife</a>, a TypeScript implementation of HashLife algorithm for Conway's Game of Life.
+    </p>
+    <p>Based on <a href="https://github.com/copy/life" target="_blank">copy/life</a> by Fabian Hemmer.</p>
   </div>
 
   <div id="controls">
-    <button id="start-btn">Start</button>
-    <button id="stop-btn">Stop</button>
-    <button id="restart-btn">Restart</button>
-    <button id="speed-up-btn">Speed Up</button>
-    <button id="speed-down-btn">Speed Down</button>
-    <button id="fit-btn">Fit Pattern</button>
+    <button id="toggle-btn">Start</button>
+    <button id="restart-btn">Reset</button>
+    <button id="fit-btn">Center</button>
+    <button id="speed-down-btn"><<</button>
+    <button id="speed-up-btn">>></button>
   </div>
 
 

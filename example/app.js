@@ -4,8 +4,7 @@ const populationEl = document.getElementById("population");
 const mouseXEl = document.getElementById("mouse-x");
 const mouseYEl = document.getElementById("mouse-y");
 const fpsEl = document.getElementById("fps");
-const startBtn = document.getElementById("start-btn");
-const stopBtn = document.getElementById("stop-btn");
+const toggleBtn = document.getElementById("toggle-btn");
 const restartBtn = document.getElementById("restart-btn");
 const speedUpBtn = document.getElementById("speed-up-btn");
 const speedDownBtn = document.getElementById("speed-down-btn");
@@ -87,8 +86,10 @@ function setupEventListeners() {
   window.addEventListener("resize", debounce(handleWindowResize, 200));
 
   // Button listeners
-  startBtn.addEventListener("click", handleStart);
-  stopBtn.addEventListener("click", () => handleStop());
+  toggleBtn.addEventListener("click", () => {
+    running ? handleStop() : handleStart();
+  });
+
   restartBtn.addEventListener("click", () => {
     handleStop(() => {
       life.clear_pattern();
@@ -242,7 +243,6 @@ function handleStart() {
   let last_frame = start - per_frame;
 
   running = true;
-  startBtn.textContent = "Running...";
 
   if (life.generation === 0) {
     life.save_rewind_state();
@@ -260,7 +260,7 @@ function handleStart() {
     if (!running) {
       if (fpsInterval) clearInterval(fpsInterval);
       updateHud(fpsEl, "00.0");
-      startBtn.textContent = "Start";
+      toggleBtn.textContent = "Start";
 
       if (onStop) {
         onStop();
@@ -292,13 +292,13 @@ function handleStart() {
     window.requestAnimationFrame(update);
   };
 
+  toggleBtn.textContent = "Stop";
   update();
 }
 
 function handleStop(callback) {
   if (running) {
     running = false;
-    startBtn.textContent = "Start";
 
     if (callback) onStop = callback;
   } else {

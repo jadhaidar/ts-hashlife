@@ -116,7 +116,7 @@ export class LifeUniverse {
 
   set step(value: number) {
     this._step = value;
-    eventBus.emit("step", value);
+    eventBus.emit("step", Math.pow(2, value));
   }
 
   get generation(): number {

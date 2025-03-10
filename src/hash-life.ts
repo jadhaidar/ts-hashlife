@@ -101,7 +101,10 @@ class HashLife {
         if (interval) clearInterval(interval);
         eventBus.emit("fps", "00.0");
 
-        if (this.onStop) this.onStop();
+        if (this.onStop) {
+          this.onStop();
+          this.onStop = null;
+        }
         return;
       }
 

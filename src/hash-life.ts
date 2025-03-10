@@ -164,7 +164,7 @@ class HashLife {
   };
 
   handleSlowDown = () => {
-    if (life.step <= 1) return;
+    if (life.step <= 0) return;
     life.set_step(life.step - 1);
   };
 

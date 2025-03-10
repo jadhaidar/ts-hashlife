@@ -21,6 +21,7 @@ export class LifeCanvasDrawer {
   private _canvas_offset_x = 0;
   private _canvas_offset_y = 0;
   private _cell_width = 0;
+  private _default_cell_width = 0;
 
   public border_width: number = 0;
   public background_color: string | null = null;
@@ -31,6 +32,14 @@ export class LifeCanvasDrawer {
   // ----------------------------------------
   // Getters and setters
   // ----------------------------------------
+
+  get default_cell_width(): number {
+    return this._default_cell_width;
+  }
+
+  set default_cell_width(value: number) {
+    this._default_cell_width = value;
+  }
 
   private get canvas_offset_x(): number {
     return this._canvas_offset_x;
@@ -57,7 +66,12 @@ export class LifeCanvasDrawer {
   set cell_width(value: number) {
     this._cell_width = value;
     this.border_width = Math.floor((value - 5) / 5) + 1;
-    EventBus.emit("zoom", value);
+
+    const ratio = value / this._default_cell_width;
+    EventBus.emit(
+      "zoom",
+      ratio >= 1 ? `1:${Math.round(ratio)}` : `${Math.round(1 / ratio)}:1`
+    );
   }
 
   private set_cell_width = (cell_width: number): boolean => {

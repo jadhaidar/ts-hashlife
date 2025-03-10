@@ -7,6 +7,7 @@ export interface EventMap {
   population: string | number;
   generation: string | number;
   zoom: string | number;
+  step: string | number;
   "mouse:x": string | number;
   "mouse:y": string | number;
   "pan:x": string | number;

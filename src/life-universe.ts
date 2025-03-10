@@ -1,5 +1,7 @@
 "use strict";
 
+import eventBus from "./event-bus";
+
 const LOAD_FACTOR = 0.9;
 const INITIAL_SIZE = 16;
 const HASHMAP_LIMIT = 24;
@@ -71,10 +73,11 @@ export class LifeUniverse {
   rule_s: number;
   root: TreeNode | null;
   rewind_state: TreeNode | null;
-  step: number;
-  generation: number;
   false_leaf: TreeNode;
   true_leaf: TreeNode;
+
+  private _step: number = 0;
+  private _generation: number = 0;
 
   constructor() {
     this.last_id = 0;
@@ -105,6 +108,24 @@ export class LifeUniverse {
     this.false_leaf = new TreeNode(null, null, null, null, 3, 0, 0);
     this.true_leaf = new TreeNode(null, null, null, null, 2, 0, 1);
     this.clear_pattern();
+  }
+
+  get step(): number {
+    return this._step;
+  }
+
+  set step(value: number) {
+    this._step = value;
+    eventBus.emit("step", value);
+  }
+
+  get generation(): number {
+    return this._generation;
+  }
+
+  set generation(value: number) {
+    this._generation = value;
+    eventBus.emit("generation", value);
   }
 
   pow2(x: number): number {

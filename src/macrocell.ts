@@ -1,7 +1,7 @@
 "use strict";
 
 import { formats } from "./formats";
-import { LifeUniverse } from "./LifeUniverse";
+import { LifeUniverse } from "./life-universe";
 
 export function load_macrocell(universe: LifeUniverse, text: string) {
   const lines = text.split("\n");

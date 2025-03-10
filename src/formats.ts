@@ -2,13 +2,15 @@ const MIN_BUFFER_SIZE = 0x100;
 const MAX_BUFFER_SIZE = 0x1000000;
 const DENSITY_ESTIMATE = 0.009;
 
-export type Pattern = {
-  title: string | undefined;
-  comment: string;
+export interface Pattern {
+  title: string;
+  description: string;
   urls: string[];
-  view_url: string | undefined;
-  source_url: string | undefined;
-};
+  source_url: string;
+  view_url: string;
+  step: string;
+  comment: string;
+}
 
 export interface Result {
   comment: string;

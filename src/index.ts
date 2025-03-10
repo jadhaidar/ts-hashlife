@@ -1,41 +1,28 @@
-import { LifeUniverse, TreeNode } from "./LifeUniverse";
+import { LifeUniverse, TreeNode } from "./life-universe";
 import { LifeCanvasDrawer } from "./draw";
-import { formats, Pattern, Result } from "./formats";
+import { formats, Result, Pattern } from "./formats";
 import { load_macrocell } from "./macrocell";
-
-import * as mathUtils from "./utils/math";
-import * as stringUtils from "./utils/string";
-import * as funcUtils from "./utils/func";
-
-const utils = {
-  string: stringUtils,
-  func: funcUtils,
-  math: mathUtils,
-};
+import EventBus from "./event-bus";
+import Game from "./hash-life";
 
 const HashLife = {
+  EventBus,
+  Game,
   LifeUniverse,
   TreeNode,
   LifeCanvasDrawer,
   formats,
   load_macrocell,
-  utils,
 };
 
 export {
   // Core components
-  LifeUniverse,
-  TreeNode,
-  LifeCanvasDrawer,
-  formats,
-  load_macrocell,
+  EventBus,
+  Game as HashLife,
 
   // Types
-  type Pattern,
   type Result,
-
-  // Utilities
-  utils,
+  type Pattern,
 };
 
 export default HashLife;

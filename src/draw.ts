@@ -1,5 +1,9 @@
-import { TreeNode } from "./LifeUniverse";
-import { clamp } from "@/utils/math";
+import { TreeNode } from "./life-universe";
+import EventBus from "./event-bus";
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(max, Math.max(min, value));
+};
 
 export class LifeCanvasDrawer {
   private canvas!: HTMLCanvasElement;
@@ -34,8 +38,7 @@ export class LifeCanvasDrawer {
 
   private set canvas_offset_x(value: number) {
     this._canvas_offset_x = value;
-    const node = document.getElementById("pan-x");
-    if (node) node.textContent = value.toFixed(0);
+    EventBus.emit("pan:x", value.toFixed(0));
   }
 
   private get canvas_offset_y(): number {
@@ -44,8 +47,7 @@ export class LifeCanvasDrawer {
 
   private set canvas_offset_y(value: number) {
     this._canvas_offset_y = value;
-    const node = document.getElementById("pan-y");
-    if (node) node.textContent = value.toFixed(0);
+    EventBus.emit("pan:y", value.toFixed(0));
   }
 
   get cell_width(): number {
@@ -55,7 +57,16 @@ export class LifeCanvasDrawer {
   set cell_width(value: number) {
     this._cell_width = value;
     this.border_width = Math.floor((value - 5) / 5) + 1;
+    EventBus.emit("zoom", value);
   }
+
+  private set_cell_width = (cell_width: number): boolean => {
+    const clampedWidth = clamp(cell_width, 0.01, 500);
+    if (clampedWidth === this.cell_width) return false;
+
+    this.cell_width = clampedWidth;
+    return true;
+  };
 
   // ----------------------------------------
   //
@@ -234,6 +245,32 @@ export class LifeCanvasDrawer {
     }
   }
 
+  pan(dx: number, dy: number): void {
+    this.canvas_offset_x -= dx * this.pixel_ratio;
+    this.canvas_offset_y -= dy * this.pixel_ratio;
+  }
+
+  center_view(): void {
+    this.canvas_offset_x = this.canvas_width >> 1;
+    this.canvas_offset_y = this.canvas_height >> 1;
+  }
+
+  private zoom(out: boolean, center_x: number, center_y: number): void {
+    if (out) {
+      const didUpdate = this.set_cell_width(this.cell_width / 2);
+      if (!didUpdate) return;
+
+      this.canvas_offset_x -= Math.round((this.canvas_offset_x - center_x) / 2);
+      this.canvas_offset_y -= Math.round((this.canvas_offset_y - center_y) / 2);
+    } else {
+      const didUpdate = this.set_cell_width(this.cell_width * 2);
+      if (!didUpdate) return;
+
+      this.canvas_offset_x += Math.round(this.canvas_offset_x - center_x);
+      this.canvas_offset_y += Math.round(this.canvas_offset_y - center_y);
+    }
+  }
+
   zoom_at(
     zoom_factor: number,
     pinch_origin_x: number,
@@ -259,32 +296,8 @@ export class LifeCanvasDrawer {
       (pinch_origin_y * this.pixel_ratio - this.canvas_offset_y);
   }
 
-  private set_cell_width = (cell_width: number): boolean => {
-    const clampedWidth = clamp(cell_width, 0.01, 500);
-    if (clampedWidth === this.cell_width) return false;
-
-    this.cell_width = clampedWidth;
-    return true;
-  };
-
   zoom_centered(out: boolean): void {
     this.zoom(out, this.canvas_width >> 1, this.canvas_height >> 1);
-  }
-
-  private zoom(out: boolean, center_x: number, center_y: number): void {
-    if (out) {
-      const didUpdate = this.set_cell_width(this.cell_width / 2);
-      if (!didUpdate) return;
-
-      this.canvas_offset_x -= Math.round((this.canvas_offset_x - center_x) / 2);
-      this.canvas_offset_y -= Math.round((this.canvas_offset_y - center_y) / 2);
-    } else {
-      const didUpdate = this.set_cell_width(this.cell_width * 2);
-      if (!didUpdate) return;
-
-      this.canvas_offset_x += Math.round(this.canvas_offset_x - center_x);
-      this.canvas_offset_y += Math.round(this.canvas_offset_y - center_y);
-    }
   }
 
   zoom_to(level: number): void {
@@ -294,16 +307,6 @@ export class LifeCanvasDrawer {
     while (this.cell_width * 2 < level) {
       this.zoom_centered(false);
     }
-  }
-
-  center_view(): void {
-    this.canvas_offset_x = this.canvas_width >> 1;
-    this.canvas_offset_y = this.canvas_height >> 1;
-  }
-
-  pan(dx: number, dy: number): void {
-    this.canvas_offset_x -= dx * this.pixel_ratio;
-    this.canvas_offset_y -= dy * this.pixel_ratio;
   }
 
   fit_bounds(bounds: {

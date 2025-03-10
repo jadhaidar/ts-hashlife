@@ -9,6 +9,8 @@ const life = new LifeUniverse();
 
 const DEFAULT_BORDER = 2,
   DEFAULT_CELL = 10,
+  DEFAULT_CELL_COLOR = "#f48c06",
+  DEFAULT_BACKGROUND_COLOR = "#000814",
   DEFAULT_FPS = 60,
   /*
    * path to the folder with all patterns
@@ -49,8 +51,8 @@ class HashLife {
     this.max_fps = opts.max_fps ?? DEFAULT_FPS;
     this.border_width = opts.border_width ?? DEFAULT_BORDER;
     this.cell_width = opts.cell_width ?? DEFAULT_CELL;
-    this.background_color = opts.background_color ?? "#000814";
-    this.cell_color = opts.cell_color ?? "#003566";
+    this.background_color = opts.background_color ?? DEFAULT_BACKGROUND_COLOR;
+    this.cell_color = opts.cell_color ?? DEFAULT_CELL_COLOR;
     this.ui_padding = {
       top: opts.ui_padding?.top ?? 0,
       right: opts.ui_padding?.right ?? 0,
@@ -182,11 +184,12 @@ class HashLife {
           `Failed to fetch example file, cause: ${response.statusText}`
         );
       const content = await response.text();
-      this.setup_pattern({
+      const pattern = {
         pattern_text: content,
         pattern_id: item.label,
-      });
-      return await response.json();
+      };
+      this.setup_pattern(pattern);
+      return pattern;
     } catch (error) {
       console.error(error);
     }

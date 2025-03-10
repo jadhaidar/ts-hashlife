@@ -2,7 +2,7 @@ import { LifeUniverse, TreeNode } from "./life-universe";
 import { LifeCanvasDrawer } from "./draw";
 import { formats, Result, Pattern } from "./formats";
 import { load_macrocell } from "./macrocell";
-import EventBus from "./event-bus";
+import EventBus, { EventMap } from "./event-bus";
 import Game from "./hash-life";
 
 const HashLife = {
@@ -23,6 +23,7 @@ export {
   // Types
   type Result,
   type Pattern,
+  type EventMap,
 };
 
 export default HashLife;

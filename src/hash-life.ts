@@ -200,6 +200,16 @@ class HashLife {
     requestAnimationFrame(() => this.lazy_redraw(life.root));
   };
 
+  handlePan = (dx: number, dy: number) => {
+    drawer.pan(dx, dy);
+    this.lazy_redraw(life.root);
+  };
+
+  handleZoom = (zoomRatio: number, x: number, y: number) => {
+    drawer.zoom_at(zoomRatio, x, y);
+    this.lazy_redraw(life.root);
+  };
+
   // ----------------------------------------
   // Helpers
   // ----------------------------------------

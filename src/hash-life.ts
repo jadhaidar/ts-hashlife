@@ -148,7 +148,6 @@ class HashLife {
     if (life.rewind_state) {
       this.handleStop(() => {
         life.restore_rewind_state();
-        life.set_step(0);
         this.fit_pattern();
         drawer.redraw(life.root);
       });

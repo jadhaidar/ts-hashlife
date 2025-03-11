@@ -29,389 +29,381 @@ export interface Result {
   error?: string;
 }
 
-export const formats = (() => {
-  return {
-    parse_rle,
-    parse_pattern,
-    rule2str,
-    parse_rule,
-    parse_comments,
-    generate_rle,
-  };
+function parse_rle(pattern_string: string): Result {
+  const result = parse_comments(pattern_string, "#");
+  let x = 0,
+    y = 0;
+  let expr = /([a-zA-Z]+) *= *([a-zA-Z0-9\/()]+)/g;
+  let header_match: RegExpExecArray | null;
 
-  function parse_rle(pattern_string: string): Result {
-    const result = parse_comments(pattern_string, "#");
-    let x = 0,
-      y = 0;
-    let expr = /([a-zA-Z]+) *= *([a-zA-Z0-9\/()]+)/g;
-    let header_match: RegExpExecArray | null;
+  pattern_string = result.pattern_string!;
+  let pos = pattern_string.indexOf("\n");
 
-    pattern_string = result.pattern_string!;
-    let pos = pattern_string.indexOf("\n");
+  if (pos === -1) {
+    return { ...result, error: "RLE Syntax Error: No Header" };
+  }
 
-    if (pos === -1) {
-      return { ...result, error: "RLE Syntax Error: No Header" };
+  while ((header_match = expr.exec(pattern_string.substr(0, pos)))) {
+    switch (header_match[1]) {
+      case "x":
+        result.width = Number(header_match[2]);
+        break;
+
+      case "y":
+        result.height = Number(header_match[2]);
+        break;
+
+      case "rule":
+        result.rule_s = parse_rule_rle(header_match[2], true);
+        result.rule_b = parse_rule_rle(header_match[2], false);
+
+        result.comment +=
+          "\nRule: " + rule2str(result.rule_s, result.rule_b) + "\n";
+        result.rule = rule2str(result.rule_s, result.rule_b);
+        break;
+
+      default:
+        return {
+          ...result,
+          error: "RLE Syntax Error: Invalid Header: " + header_match[1],
+        };
     }
+  }
 
-    while ((header_match = expr.exec(pattern_string.substr(0, pos)))) {
-      switch (header_match[1]) {
-        case "x":
-          result.width = Number(header_match[2]);
+  let initial_size = MIN_BUFFER_SIZE;
+
+  if (result.width && result.height) {
+    const size = result.width * result.height;
+
+    if (size > 0) {
+      initial_size = Math.max(
+        initial_size,
+        Math.floor(size * DENSITY_ESTIMATE)
+      );
+      initial_size = Math.min(MAX_BUFFER_SIZE, initial_size);
+    }
+  }
+
+  let count = 1;
+  let in_number = false;
+  let chr: number;
+  let field_x = new Int32Array(initial_size);
+  let field_y = new Int32Array(initial_size);
+  let alive_count = 0;
+  const len = pattern_string.length;
+
+  for (; pos < len; pos++) {
+    chr = pattern_string.charCodeAt(pos);
+
+    if (chr >= 48 && chr <= 57) {
+      if (in_number) {
+        count *= 10;
+        count += chr ^ 48;
+      } else {
+        count = chr ^ 48;
+        in_number = true;
+      }
+    } else {
+      if (chr === 98) {
+        x += count;
+      } else if ((chr >= 65 && chr <= 90) || (chr >= 97 && chr < 122)) {
+        if (alive_count + count > field_x.length) {
+          field_x = increase_buf_size(field_x);
+          field_y = increase_buf_size(field_y);
+        }
+
+        while (count--) {
+          field_x[alive_count] = x++;
+          field_y[alive_count] = y;
+          alive_count++;
+        }
+      } else if (chr === 36) {
+        y += count;
+        x = 0;
+      } else if (chr === 33) {
+        break;
+      }
+
+      count = 1;
+      in_number = false;
+    }
+  }
+
+  result.field_x = new Int32Array(field_x.buffer, 0, alive_count);
+  result.field_y = new Int32Array(field_y.buffer, 0, alive_count);
+
+  return result;
+}
+
+function increase_buf_size(buffer: Int32Array): Int32Array {
+  const new_buffer = new Int32Array(Math.floor(buffer.length * 1.5));
+  new_buffer.set(buffer);
+  return new_buffer;
+}
+
+function parse_comments(pattern_string: string, comment_char: string): Result {
+  const result: Result = {
+    comment: "",
+    urls: [],
+    short_comment: "",
+  };
+  let nl: number;
+  let line: string;
+  let cont: boolean;
+  const advanced = comment_char === "#";
+
+  while (pattern_string[0] === comment_char) {
+    nl = pattern_string.indexOf("\n");
+    line = pattern_string.substr(1, nl - 1);
+    cont = true;
+
+    if (advanced) {
+      line = line.substr(1).trim();
+
+      switch (pattern_string[1]) {
+        case "N":
+          result.title = line || "23/3";
+          cont = false;
           break;
 
-        case "y":
-          result.height = Number(header_match[2]);
+        case "O":
+          result.author = line;
           break;
 
-        case "rule":
-          result.rule_s = parse_rule_rle(header_match[2], true);
-          result.rule_b = parse_rule_rle(header_match[2], false);
-
-          result.comment +=
-            "\nRule: " + rule2str(result.rule_s, result.rule_b) + "\n";
-          result.rule = rule2str(result.rule_s, result.rule_b);
+        case "R":
+          result.rule = line;
+          cont = false;
           break;
 
         default:
-          return {
-            ...result,
-            error: "RLE Syntax Error: Invalid Header: " + header_match[1],
-          };
+          cont = false;
       }
     }
 
-    let initial_size = MIN_BUFFER_SIZE;
-
-    if (result.width && result.height) {
-      const size = result.width * result.height;
-
-      if (size > 0) {
-        initial_size = Math.max(
-          initial_size,
-          Math.floor(size * DENSITY_ESTIMATE)
-        );
-        initial_size = Math.min(MAX_BUFFER_SIZE, initial_size);
-      }
-    }
-
-    let count = 1;
-    let in_number = false;
-    let chr: number;
-    let field_x = new Int32Array(initial_size);
-    let field_y = new Int32Array(initial_size);
-    let alive_count = 0;
-    const len = pattern_string.length;
-
-    for (; pos < len; pos++) {
-      chr = pattern_string.charCodeAt(pos);
-
-      if (chr >= 48 && chr <= 57) {
-        if (in_number) {
-          count *= 10;
-          count += chr ^ 48;
-        } else {
-          count = chr ^ 48;
-          in_number = true;
+    if (cont) {
+      if (/^(?:https?:\/\/|www\.)[a-z0-9]/i.test(line)) {
+        if (line.substr(0, 4) !== "http") {
+          line = "http://" + line;
         }
+        result.urls.push(line);
       } else {
-        if (chr === 98) {
-          x += count;
-        } else if ((chr >= 65 && chr <= 90) || (chr >= 97 && chr < 122)) {
-          if (alive_count + count > field_x.length) {
-            field_x = increase_buf_size(field_x);
-            field_y = increase_buf_size(field_y);
-          }
-
-          while (count--) {
-            field_x[alive_count] = x++;
-            field_y[alive_count] = y;
-            alive_count++;
-          }
-        } else if (chr === 36) {
-          y += count;
-          x = 0;
-        } else if (chr === 33) {
-          break;
+        result.comment += line;
+        if (nl !== 70 && nl !== 80) {
+          result.comment += "\n";
         }
-
-        count = 1;
-        in_number = false;
       }
     }
 
-    result.field_x = new Int32Array(field_x.buffer, 0, alive_count);
-    result.field_y = new Int32Array(field_y.buffer, 0, alive_count);
-
-    return result;
+    pattern_string = pattern_string.substr(nl + 1);
   }
 
-  function increase_buf_size(buffer: Int32Array): Int32Array {
-    const new_buffer = new Int32Array(Math.floor(buffer.length * 1.5));
-    new_buffer.set(buffer);
-    return new_buffer;
+  result.pattern_string = pattern_string;
+  result.comment = result.comment.trim();
+
+  return result;
+}
+
+function parse_rule_rle(rule_str: string, survived: boolean): number {
+  const tokens = rule_str.split("/");
+
+  if (!tokens[1]) {
+    return 0;
   }
 
-  function parse_comments(
-    pattern_string: string,
-    comment_char: string
-  ): Result {
-    const result: Result = {
-      comment: "",
-      urls: [],
-      short_comment: "",
-    };
-    let nl: number;
-    let line: string;
-    let cont: boolean;
-    const advanced = comment_char === "#";
-
-    while (pattern_string[0] === comment_char) {
-      nl = pattern_string.indexOf("\n");
-      line = pattern_string.substr(1, nl - 1);
-      cont = true;
-
-      if (advanced) {
-        line = line.substr(1).trim();
-
-        switch (pattern_string[1]) {
-          case "N":
-            result.title = line || "23/3";
-            cont = false;
-            break;
-
-          case "O":
-            result.author = line;
-            break;
-
-          case "R":
-            result.rule = line;
-            cont = false;
-            break;
-
-          default:
-            cont = false;
-        }
-      }
-
-      if (cont) {
-        if (/^(?:https?:\/\/|www\.)[a-z0-9]/i.test(line)) {
-          if (line.substr(0, 4) !== "http") {
-            line = "http://" + line;
-          }
-          result.urls.push(line);
-        } else {
-          result.comment += line;
-          if (nl !== 70 && nl !== 80) {
-            result.comment += "\n";
-          }
-        }
-      }
-
-      pattern_string = pattern_string.substr(nl + 1);
-    }
-
-    result.pattern_string = pattern_string;
-    result.comment = result.comment.trim();
-
-    return result;
+  if (Number(tokens[0])) {
+    return parse_rule(tokens.join("/"), survived);
   }
 
-  function parse_rule_rle(rule_str: string, survived: boolean): number {
-    const tokens = rule_str.split("/");
+  if (tokens[0][0].toLowerCase() === "b") {
+    tokens.reverse();
+  }
 
-    if (!tokens[1]) {
+  return parse_rule(tokens[0].substr(1) + "/" + tokens[1].substr(1), survived);
+}
+
+function parse_rule(rule_str: string, survived: boolean): number {
+  let rule = 0;
+  const parsed = rule_str.split("/")[survived ? 0 : 1];
+
+  for (const char of parsed) {
+    const n = Number(char);
+
+    if (isNaN(n) || rule & (1 << n)) {
       return 0;
     }
 
-    if (Number(tokens[0])) {
-      return parse_rule(tokens.join("/"), survived);
-    }
-
-    if (tokens[0][0].toLowerCase() === "b") {
-      tokens.reverse();
-    }
-
-    return parse_rule(
-      tokens[0].substr(1) + "/" + tokens[1].substr(1),
-      survived
-    );
+    rule |= 1 << n;
   }
 
-  function parse_rule(rule_str: string, survived: boolean): number {
-    let rule = 0;
-    const parsed = rule_str.split("/")[survived ? 0 : 1];
+  return rule;
+}
 
-    for (const char of parsed) {
-      const n = Number(char);
+function rule2str(rule_s: number, rule_b: number): string {
+  let rule = "";
 
-      if (isNaN(n) || rule & (1 << n)) {
-        return 0;
-      }
-
-      rule |= 1 << n;
+  for (let i = 0; rule_s; rule_s >>= 1, i++) {
+    if (rule_s & 1) {
+      rule += i;
     }
-
-    return rule;
   }
 
-  function rule2str(rule_s: number, rule_b: number): string {
-    let rule = "";
+  rule += "/";
 
-    for (let i = 0; rule_s; rule_s >>= 1, i++) {
-      if (rule_s & 1) {
-        rule += i;
-      }
+  for (let i = 0; rule_b; rule_b >>= 1, i++) {
+    if (rule_b & 1) {
+      rule += i;
     }
-
-    rule += "/";
-
-    for (let i = 0; rule_b; rule_b >>= 1, i++) {
-      if (rule_b & 1) {
-        rule += i;
-      }
-    }
-
-    return rule;
   }
 
-  function rule2str_rle(rule_s: number, rule_b: number): string {
-    const rule = rule2str(rule_s, rule_b);
-    const tokens = rule.split("/");
-    return `B${tokens[1]}/S${tokens[0]}`;
+  return rule;
+}
+
+function rule2str_rle(rule_s: number, rule_b: number): string {
+  const rule = rule2str(rule_s, rule_b);
+  const tokens = rule.split("/");
+  return `B${tokens[1]}/S${tokens[0]}`;
+}
+
+function* rle_generator(life: any, bounds: any): Generator<string> {
+  function make(length: number, is_empty: boolean): string {
+    if (length === 0) return "";
+    const length_tag = length > 1 ? String(length) : "";
+    return length_tag + (is_empty ? "b" : "o");
   }
 
-  function* rle_generator(life: any, bounds: any): Generator<string> {
-    function make(length: number, is_empty: boolean): string {
-      if (length === 0) return "";
-      const length_tag = length > 1 ? String(length) : "";
-      return length_tag + (is_empty ? "b" : "o");
-    }
+  for (let y = bounds.top; y <= bounds.bottom; y++) {
+    let state_is_empty = true;
+    let run_start = bounds.left;
 
-    for (let y = bounds.top; y <= bounds.bottom; y++) {
-      let state_is_empty = true;
-      let run_start = bounds.left;
+    for (let x = bounds.left; x <= bounds.right; x++) {
+      const is_empty = !life.get_bit(x, y);
+      const run_length = x - run_start;
 
-      for (let x = bounds.left; x <= bounds.right; x++) {
-        const is_empty = !life.get_bit(x, y);
-        const run_length = x - run_start;
-
-        if (state_is_empty !== is_empty) {
-          yield make(run_length, state_is_empty);
-          run_start = x;
-          state_is_empty = is_empty;
-        }
-      }
-
-      if (!state_is_empty) {
-        const run_length = bounds.right + 1 - run_start;
+      if (state_is_empty !== is_empty) {
         yield make(run_length, state_is_empty);
-      }
-
-      if (y !== bounds.bottom) yield "$";
-    }
-
-    yield "!";
-  }
-
-  function generate_rle(life: any, name: string, comments: string[]): string {
-    const lines: string[] = [];
-    const MAX_LINE_LENGTH = 70;
-
-    if (name) {
-      lines.push("#N " + name);
-    }
-
-    comments.forEach((c) => lines.push("#C " + c));
-
-    const bounds = life.get_root_bounds();
-    const width = bounds.right - bounds.left + 1;
-    const height = bounds.bottom - bounds.top + 1;
-    const rule = rule2str_rle(life.rule_s, life.rule_b);
-
-    lines.push(`x = ${width}, y = ${height}, rule = ${rule}`);
-
-    let current_line = "";
-    for (const fragment of rle_generator(life, bounds)) {
-      if (current_line.length + fragment.length > MAX_LINE_LENGTH) {
-        lines.push(current_line);
-        current_line = "";
-      }
-      current_line += fragment;
-    }
-    lines.push(current_line);
-
-    return lines.join("\n");
-  }
-
-  function parse_pattern(
-    pattern_text: string
-  ): Partial<Result> | { error: string } {
-    pattern_text = pattern_text.replace(/\r/g, "");
-
-    if (pattern_text[0] === "!") {
-      return parse_plaintext(pattern_text);
-    } else if (
-      /^(?:#[^\n]*\n)*\n*(?:(?:x|y|rule|color|alpha) *= *[a-z0-9\/(),]+,? *)+\s*\n/i.test(
-        pattern_text
-      )
-    ) {
-      return parse_rle(pattern_text);
-    } else if (pattern_text.substr(0, 10) === "#Life 1.06") {
-      return parse_life106(pattern_text);
-    } else {
-      return { error: "Format detection failed." };
-    }
-  }
-
-  function parse_plaintext(pattern_string: string): Result | { error: string } {
-    const result = parse_comments(pattern_string, "!");
-
-    pattern_string = result.pattern_string!;
-
-    const field_x: number[] = [];
-    const field_y: number[] = [];
-    let x = 0,
-      y = 0;
-    const len = pattern_string.length;
-
-    for (let i = 0; i < len; i++) {
-      switch (pattern_string[i]) {
-        case ".":
-          x++;
-          break;
-        case "O":
-          field_x.push(x++);
-          field_y.push(y);
-          break;
-        case "\n":
-          y++;
-          x = 0;
-          break;
-        case "\r":
-        case " ":
-          break;
-        default:
-          return { error: "Plaintext: Syntax Error" };
+        run_start = x;
+        state_is_empty = is_empty;
       }
     }
 
-    result.field_x = field_x;
-    result.field_y = field_y;
-
-    return result;
-  }
-
-  function parse_life106(pattern_string: string): Partial<Result> {
-    const expr = /\s*(-?\d+)\s+(-?\d+)\s*(?:\n|$)/g;
-    const field_x: number[] = [];
-    const field_y: number[] = [];
-    let match: RegExpExecArray | null;
-
-    while ((match = expr.exec(pattern_string))) {
-      field_x.push(Number(match[1]));
-      field_y.push(Number(match[2]));
+    if (!state_is_empty) {
+      const run_length = bounds.right + 1 - run_start;
+      yield make(run_length, state_is_empty);
     }
 
-    return { field_x, field_y };
+    if (y !== bounds.bottom) yield "$";
   }
-})();
+
+  yield "!";
+}
+
+function generate_rle(life: any, name: string, comments: string[]): string {
+  const lines: string[] = [];
+  const MAX_LINE_LENGTH = 70;
+
+  if (name) {
+    lines.push("#N " + name);
+  }
+
+  comments.forEach((c) => lines.push("#C " + c));
+
+  const bounds = life.get_root_bounds();
+  const width = bounds.right - bounds.left + 1;
+  const height = bounds.bottom - bounds.top + 1;
+  const rule = rule2str_rle(life.rule_s, life.rule_b);
+
+  lines.push(`x = ${width}, y = ${height}, rule = ${rule}`);
+
+  let current_line = "";
+  for (const fragment of rle_generator(life, bounds)) {
+    if (current_line.length + fragment.length > MAX_LINE_LENGTH) {
+      lines.push(current_line);
+      current_line = "";
+    }
+    current_line += fragment;
+  }
+  lines.push(current_line);
+
+  return lines.join("\n");
+}
+
+function parse_pattern(
+  pattern_text: string
+): Partial<Result> | { error: string } {
+  pattern_text = pattern_text.replace(/\r/g, "");
+
+  if (pattern_text[0] === "!") {
+    return parse_plaintext(pattern_text);
+  } else if (
+    /^(?:#[^\n]*\n)*\n*(?:(?:x|y|rule|color|alpha) *= *[a-z0-9\/(),]+,? *)+\s*\n/i.test(
+      pattern_text
+    )
+  ) {
+    return parse_rle(pattern_text);
+  } else if (pattern_text.substr(0, 10) === "#Life 1.06") {
+    return parse_life106(pattern_text);
+  } else {
+    return { error: "Format detection failed." };
+  }
+}
+
+function parse_plaintext(pattern_string: string): Result | { error: string } {
+  const result = parse_comments(pattern_string, "!");
+
+  pattern_string = result.pattern_string!;
+
+  const field_x: number[] = [];
+  const field_y: number[] = [];
+  let x = 0,
+    y = 0;
+  const len = pattern_string.length;
+
+  for (let i = 0; i < len; i++) {
+    switch (pattern_string[i]) {
+      case ".":
+        x++;
+        break;
+      case "O":
+        field_x.push(x++);
+        field_y.push(y);
+        break;
+      case "\n":
+        y++;
+        x = 0;
+        break;
+      case "\r":
+      case " ":
+        break;
+      default:
+        return { error: "Plaintext: Syntax Error" };
+    }
+  }
+
+  result.field_x = field_x;
+  result.field_y = field_y;
+
+  return result;
+}
+
+function parse_life106(pattern_string: string): Partial<Result> {
+  const expr = /\s*(-?\d+)\s+(-?\d+)\s*(?:\n|$)/g;
+  const field_x: number[] = [];
+  const field_y: number[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = expr.exec(pattern_string))) {
+    field_x.push(Number(match[1]));
+    field_y.push(Number(match[2]));
+  }
+
+  return { field_x, field_y };
+}
+
+export const formats = {
+  parse_rle,
+  parse_pattern,
+  rule2str,
+  parse_rule,
+  parse_comments,
+  generate_rle,
+};

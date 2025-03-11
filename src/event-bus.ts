@@ -13,8 +13,8 @@ export interface EventMap {
   "pan:x": string | number;
   "pan:y": string | number;
   "pattern:load": Pattern;
-  "start": void;
-  "stop": void;
+  "start": boolean;
+  "stop": boolean;
 }
 
 type ListenersMap = {

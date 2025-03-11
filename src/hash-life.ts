@@ -32,7 +32,7 @@ export type HashLifeOptions = {
 };
 
 class HashLife {
-  running = false;
+  private _running = false;
   private onStop: (() => void) | null = null;
 
   private max_fps: number;
@@ -59,6 +59,15 @@ class HashLife {
       bottom: opts.ui_padding?.bottom ?? 0,
       left: opts.ui_padding?.left ?? 0,
     };
+  }
+
+  get running() {
+    return this._running;
+  }
+
+  set running(value) {
+    this._running = value;
+    eventBus.emit(value ? "start" : "stop", value);
   }
 
   // ----------------------------------------

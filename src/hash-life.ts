@@ -304,9 +304,7 @@ class HashLife {
       const pattern = {
         title: result.title,
         description:
-          result.comment.replace(/\n/g, " - ") +
-          ((document.querySelector("meta[name=description]") as HTMLMetaElement)
-            ?.content ?? ""),
+          result.comment.replace(/\n/g, " - "),
         source_url: this.rle_link(pattern_id, true),
         view_url: this.view_link(pattern_id),
         urls: result.urls,

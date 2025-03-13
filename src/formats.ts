@@ -5,17 +5,14 @@ const DENSITY_ESTIMATE = 0.009;
 export interface Pattern {
   title: string;
   description: string;
-  urls: string[];
   source_url: string;
   view_url: string;
-  step: string;
-  comment: string;
+  urls: string[];
 }
 
 export interface Result {
   comment: string;
   urls: string[];
-  short_comment: string;
   title?: string;
   author?: string;
   rule?: string;
@@ -145,56 +142,43 @@ function parse_comments(pattern_string: string, comment_char: string): Result {
   const result: Result = {
     comment: "",
     urls: [],
-    short_comment: "",
   };
   let nl: number;
   let line: string;
-  let cont: boolean;
   const advanced = comment_char === "#";
 
   while (pattern_string[0] === comment_char) {
     nl = pattern_string.indexOf("\n");
-    line = pattern_string.substr(1, nl - 1);
-    cont = true;
+    if (nl === -1) nl = pattern_string.length; // Handle the case where there's no newline
+    line = pattern_string.substring(1, nl).trim();
 
-    if (advanced) {
-      line = line.substr(1).trim();
+    // Check for special comment types (N, O, R)
+    if (advanced && pattern_string.length > 1) {
+      const secondChar = pattern_string[1];
 
-      switch (pattern_string[1]) {
-        case "N":
-          result.title = line || "23/3";
-          cont = false;
-          break;
+      if (secondChar === "N") {
+        result.title = line.substring(1).trim();
+      } else if (secondChar === "O") {
+        result.author = line.substring(1).trim();
+      } else if (secondChar === "R") {
+        result.rule = line.substring(1).trim();
+      } else if (secondChar === "C") {
+        // Handle regular comments and URLs
+        const commentLine = line.substring(1).trim();
 
-        case "O":
-          result.author = line;
-          break;
-
-        case "R":
-          result.rule = line;
-          cont = false;
-          break;
-
-        default:
-          cont = false;
-      }
-    }
-
-    if (cont) {
-      if (/^(?:https?:\/\/|www\.)[a-z0-9]/i.test(line)) {
-        if (line.substr(0, 4) !== "http") {
-          line = "http://" + line;
-        }
-        result.urls.push(line);
-      } else {
-        result.comment += line;
-        if (nl !== 70 && nl !== 80) {
-          result.comment += "\n";
+        if (/^(?:https?:\/\/|www\.)[a-z0-9]/i.test(commentLine)) {
+          let urlLine = commentLine;
+          if (urlLine.substring(0, 4) !== "http") {
+            urlLine = "http://" + urlLine;
+          }
+          result.urls.push(urlLine);
+        } else {
+          result.comment += commentLine + "\n";
         }
       }
     }
 
-    pattern_string = pattern_string.substr(nl + 1);
+    pattern_string = pattern_string.substring(nl + 1);
   }
 
   result.pattern_string = pattern_string;

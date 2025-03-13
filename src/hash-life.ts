@@ -15,7 +15,7 @@ const DEFAULT_BORDER = 2,
   /*
    * path to the folder with all patterns
    */
-  pattern_path = "examples/";
+  EXAMPLES_PATH = "/examples/";
 
 export type HashLifeOptions = {
   max_fps?: number;
@@ -184,26 +184,76 @@ class HashLife {
     this.lazy_redraw(life.root);
   };
 
-  handleLoadExampleFromFile = async (item: {
-    value: string;
-    label: string;
+  handleLoadExampleFromFile = ({
+    pattern_text,
+    pattern_id,
+    pattern_path,
+    title,
+  }: {
+    pattern_text: string;
+    pattern_id: string;
+    pattern_path: string;
+    title?: string;
   }) => {
-    try {
-      const response = await fetch(`/examples/${item.value}`);
-      if (!response.ok)
-        throw new Error(
-          `Failed to fetch example file, cause: ${response.statusText}`
-        );
-      const content = await response.text();
-      const pattern = {
-        pattern_text: content,
-        pattern_id: item.label,
+    const is_mc = pattern_text.startsWith("[M2]");
+    let result: Result;
+
+    if (!is_mc) {
+      const payload = formats.parse_pattern(pattern_text.trim());
+
+      if (payload.error) {
+        throw new Error(payload.error);
+      } else {
+        result = payload as Result;
+      }
+    } else {
+      result = {
+        comment: "",
+        urls: [],
       };
-      this.setup_pattern(pattern);
-      return pattern;
-    } catch (error) {
-      console.error(error);
     }
+
+    this.handleStop(() => {
+      life.clear_pattern();
+
+      if (!is_mc) {
+        const bounds = life.get_bounds(result.field_x!, result.field_y!);
+        life.make_center(result.field_x!, result.field_y!, bounds);
+        life.setup_field(result.field_x!, result.field_y!, bounds);
+      } else {
+        const mc = load_macrocell(life, pattern_text);
+        if (!mc) {
+          throw new Error("Failed to load macrocell");
+        }
+        result = mc;
+        life.set_step(15);
+      }
+
+      life.save_rewind_state();
+
+      if (result.rule_s && result.rule_b) {
+        life.set_rules(result.rule_s, result.rule_b);
+      } else {
+        life.set_rules((1 << 2) | (1 << 3), 1 << 3); // Default rules
+      }
+
+      this.fit_pattern();
+      drawer.redraw(life.root);
+
+      if (life.root?.population)
+        eventBus.emit("population", life.root.population);
+
+      if (pattern_id && !result.title) result.title = pattern_id;
+      const pattern: Pattern = {
+        title: result.title || title || pattern_id,
+        description: result.comment,
+        source_url: EXAMPLES_PATH + pattern_path,
+        view_url: `?pattern=${pattern_path}`,
+        urls: result.urls,
+      };
+
+      eventBus.emit("pattern:load", pattern);
+    });
   };
 
   handleWindowResize = () => {
@@ -235,82 +285,6 @@ class HashLife {
       bottom: bounds.bottom + this.ui_padding.bottom,
       left: bounds.left + this.ui_padding.left,
       right: bounds.right + this.ui_padding.right,
-    });
-  };
-
-  private setup_pattern = ({
-    pattern_text,
-    pattern_id,
-  }: // pattern_source_url,
-  // view_url,
-  // title,
-  {
-    pattern_text: string;
-    pattern_id: string;
-    pattern_source_url?: string;
-    view_url?: string;
-    title?: string;
-  }) => {
-    const is_mc = pattern_text.startsWith("[M2]");
-    let result: Result;
-
-    if (!is_mc) {
-      const payload = formats.parse_pattern(pattern_text.trim());
-
-      if (payload.error) {
-        throw new Error(payload.error);
-      } else {
-        result = payload as Result;
-      }
-    } else {
-      result = {
-        comment: "",
-        urls: [],
-        short_comment: "",
-      };
-    }
-
-    this.handleStop(() => {
-      if (pattern_id && !result.title) result.title = pattern_id;
-      life.clear_pattern();
-
-      if (!is_mc) {
-        const bounds = life.get_bounds(result.field_x!, result.field_y!);
-        life.make_center(result.field_x!, result.field_y!, bounds);
-        life.setup_field(result.field_x!, result.field_y!, bounds);
-      } else {
-        const mc = load_macrocell(life, pattern_text);
-        if (!mc) return;
-        result = mc;
-        const step = 15;
-        life.set_step(step);
-        // pattern.step = Math.pow(2, step).toString();
-      }
-
-      life.save_rewind_state();
-
-      if (result.rule_s && result.rule_b) {
-        life.set_rules(result.rule_s, result.rule_b);
-      } else {
-        life.set_rules((1 << 2) | (1 << 3), 1 << 3); // Default rules
-      }
-
-      this.fit_pattern();
-      drawer.redraw(life.root);
-
-      if (life.root?.population)
-        eventBus.emit("population", life.root.population);
-
-      const pattern = {
-        title: result.title,
-        description:
-          result.comment.replace(/\n/g, " - "),
-        source_url: this.rle_link(pattern_id, true),
-        view_url: this.view_link(pattern_id),
-        urls: result.urls,
-      } as Pattern;
-
-      eventBus.emit("pattern:load", pattern);
     });
   };
 
@@ -348,21 +322,6 @@ class HashLife {
     if (!this.running || this.max_fps < 15) {
       drawer.redraw(node);
     }
-  };
-
-  private rle_link = (id: string, absolute = false) => {
-    if (!id.endsWith(".mc")) {
-      id = id + ".rle";
-    }
-
-    if (!absolute || location.hostname === "localhost")
-      return pattern_path + id;
-
-    return "https://hashlife.jadhaidar.com/" + pattern_path + id;
-  };
-
-  private view_link = (id: string) => {
-    return `${location.origin}?pattern=${id}`;
   };
 }
 

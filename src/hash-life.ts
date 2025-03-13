@@ -276,6 +276,16 @@ class HashLife {
     this.lazy_redraw(life.root);
   };
 
+  handleSetUiPadding = (padding: {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+  } = {}) => {
+    this.ui_padding = { ...this.ui_padding, ...padding };
+    this.fit_pattern();
+  };
+
   // ----------------------------------------
   // Helpers
   // ----------------------------------------

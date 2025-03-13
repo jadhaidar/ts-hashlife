@@ -15,7 +15,7 @@ const DEFAULT_BORDER = 2,
   /*
    * path to the folder with all patterns
    */
-  EXAMPLES_PATH = "/examples/";
+  EXAMPLES_PATH = "/examples";
 
 export type HashLifeOptions = {
   max_fps?: number;
@@ -246,6 +246,8 @@ class HashLife {
       if (pattern_id && !result.title) result.title = pattern_id;
       const pattern: Pattern = {
         title: result.title || title || pattern_id,
+        author: result.author,
+        rule: result.rule,
         description: result.comment,
         source_url: EXAMPLES_PATH + pattern_path,
         view_url: `?pattern=${pattern_path}`,

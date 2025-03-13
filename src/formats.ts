@@ -8,6 +8,8 @@ export interface Pattern {
   source_url: string;
   view_url: string;
   urls: string[];
+  rule?: string;
+  author?: string;
 }
 
 export interface Result {
@@ -54,8 +56,6 @@ function parse_rle(pattern_string: string): Result {
         result.rule_s = parse_rule_rle(header_match[2], true);
         result.rule_b = parse_rule_rle(header_match[2], false);
 
-        result.comment +=
-          "\nRule: " + rule2str(result.rule_s, result.rule_b) + "\n";
         result.rule = rule2str(result.rule_s, result.rule_b);
         break;
 

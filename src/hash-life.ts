@@ -250,7 +250,7 @@ class HashLife {
         rule: result.rule,
         description: result.comment,
         source_url: EXAMPLES_PATH + pattern_path,
-        view_url: `?pattern=${pattern_path}`,
+        view_url: pattern_path,
         urls: result.urls,
       };
 
@@ -282,12 +282,20 @@ class HashLife {
 
   private fit_pattern = () => {
     const bounds = life.get_root_bounds();
-    drawer.fit_bounds({
-      top: bounds.top + this.ui_padding.top,
-      bottom: bounds.bottom + this.ui_padding.bottom,
-      left: bounds.left + this.ui_padding.left,
-      right: bounds.right + this.ui_padding.right,
-    });
+    drawer.fit_bounds(
+      {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        left: bounds.left,
+        right: bounds.right,
+      },
+      {
+        top: this.ui_padding.top,
+        bottom: this.ui_padding.bottom,
+        left: this.ui_padding.left,
+        right: this.ui_padding.right,
+      }
+    );
   };
 
   private step = (is_single = false) => {

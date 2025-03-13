@@ -323,33 +323,61 @@ export class LifeCanvasDrawer {
     }
   }
 
-  fit_bounds(bounds: {
-    right: number;
-    left: number;
-    bottom: number;
-    top: number;
-  }): void {
+  fit_bounds(
+    bounds: {
+      right: number;
+      left: number;
+      bottom: number;
+      top: number;
+    },
+    padding?: {
+      right?: number;
+      left?: number;
+      bottom?: number;
+      top?: number;
+    }
+  ): void {
     const width = bounds.right - bounds.left;
     const height = bounds.bottom - bounds.top;
 
+    const pad = {
+      right: (padding?.right || 0) * this.pixel_ratio,
+      left: (padding?.left || 0) * this.pixel_ratio,
+      bottom: (padding?.bottom || 0) * this.pixel_ratio,
+      top: (padding?.top || 0) * this.pixel_ratio,
+    };
+
     if (isFinite(width) && isFinite(height)) {
+      const availableWidth = this.canvas_width - (pad.left + pad.right);
+      const availableHeight = this.canvas_height - (pad.top + pad.bottom);
+
       const relative_size = Math.min(
         16, // maximum cell size
-        this.canvas_width / width,
-        this.canvas_height / height
+        availableWidth / width,
+        availableHeight / height
       );
       this.zoom_to(relative_size);
 
+      // Calculate center position accounting for padding
+      // This shifts the pattern to account for the padding on all sides
+      const horizontalCenter = pad.left + availableWidth / 2;
+      const verticalCenter = pad.top + availableHeight / 2;
+
       this.canvas_offset_x = Math.round(
-        this.canvas_width / 2 - (bounds.left + width / 2) * this.cell_width
+        horizontalCenter - (bounds.left + width / 2) * this.cell_width
       );
       this.canvas_offset_y = Math.round(
-        this.canvas_height / 2 - (bounds.top + height / 2) * this.cell_width
+        verticalCenter - (bounds.top + height / 2) * this.cell_width
       );
     } else {
       this.zoom_to(16);
-      this.canvas_offset_x = this.canvas_width >> 1;
-      this.canvas_offset_y = this.canvas_height >> 1;
+
+      // Center within available space
+      const availableWidth = this.canvas_width - (pad.left + pad.right);
+      const availableHeight = this.canvas_height - (pad.top + pad.bottom);
+
+      this.canvas_offset_x = pad.left + (availableWidth >> 1);
+      this.canvas_offset_y = pad.top + (availableHeight >> 1);
     }
   }
 

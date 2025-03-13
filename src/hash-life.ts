@@ -309,8 +309,8 @@ class HashLife {
     drawer.background_color = this.background_color;
 
     drawer.cell_color = this.cell_color;
-    drawer.cell_width = this.cell_width;
     drawer.default_cell_width = this.cell_width;
+    drawer.cell_width = this.cell_width;
     drawer.border_width = this.border_width;
 
     drawer.center_view();

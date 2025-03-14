@@ -1,7 +1,7 @@
 import { TreeNode } from "./life-universe";
 import EventBus from "./event-bus";
 
-const clamp = (value: number, min: number, max: number) => {
+export const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value));
 };
 

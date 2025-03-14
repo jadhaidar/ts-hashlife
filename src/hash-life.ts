@@ -1,4 +1,4 @@
-import { LifeCanvasDrawer } from "./draw";
+import { clamp, LifeCanvasDrawer } from "./draw";
 import { LifeUniverse, TreeNode } from "./life-universe";
 import eventBus from "./event-bus";
 import { formats, Pattern, Result } from "./formats";
@@ -15,7 +15,7 @@ const DEFAULT_BORDER = 2,
   /*
    * path to the folder with all patterns
    */
-  EXAMPLES_PATH = "/examples";
+  PATTERNS_PATH = "/patterns";
 
 export type HashLifeOptions = {
   max_fps?: number;
@@ -249,9 +249,74 @@ class HashLife {
         author: result.author,
         rule: result.rule,
         description: result.comment,
-        source_url: EXAMPLES_PATH + pattern_path,
+        source_url: PATTERNS_PATH + pattern_path,
         view_url: pattern_path ?? "",
         urls: result.urls,
+      };
+
+      eventBus.emit("pattern:load", pattern);
+    });
+  };
+
+  handleLoadRandomizedPattern = ({
+    density,
+    width,
+    height,
+  }: {
+    density: number;
+    width: number;
+    height: number;
+  }) => {
+    const normalizedDensity = clamp(density, 0, 1);
+    const normalizedWidth = clamp(width, 100, 1000);
+    const normalizedHeight = clamp(height, 100, 1000);
+
+    this.handleStop(() => {
+      life.clear_pattern();
+
+      // Calculate number of cells based on density and dimensions
+      const cellCount = Math.round(
+        normalizedWidth * normalizedHeight * normalizedDensity
+      );
+
+      // Create arrays for cell coordinates
+      const field_x = new Int32Array(cellCount);
+      const field_y = new Int32Array(cellCount);
+
+      // Generate random positions
+      for (let i = 0; i < cellCount; i++) {
+        field_x[i] = Math.floor(Math.random() * normalizedWidth);
+        field_y[i] = Math.floor(Math.random() * normalizedHeight);
+      }
+
+      // Set up the universe with the random pattern
+      const bounds = life.get_bounds(field_x, field_y);
+      life.make_center(field_x, field_y, bounds);
+      life.setup_field(field_x, field_y, bounds);
+
+      // Save initial state for reset functionality
+      life.save_rewind_state();
+
+      // Fit pattern to view and redraw
+      this.fit_pattern();
+      drawer.redraw(life.root);
+
+      // Update population count in UI
+      if (life.root?.population) {
+        eventBus.emit("population", life.root.population);
+      }
+
+      // Emit pattern load event with random pattern information
+      const pattern: Pattern = {
+        title: "Random pattern",
+        author: "",
+        rule: "",
+        description: `Randomly generated pattern with density ${normalizedDensity.toFixed(
+          2
+        )}, width ${normalizedWidth}, height ${normalizedHeight}`,
+        source_url: "",
+        view_url: "",
+        urls: [],
       };
 
       eventBus.emit("pattern:load", pattern);
@@ -276,12 +341,14 @@ class HashLife {
     this.lazy_redraw(life.root);
   };
 
-  handleSetUiPadding = (padding: {
-    top?: number;
-    right?: number;
-    bottom?: number;
-    left?: number;
-  } = {}) => {
+  handleSetUiPadding = (
+    padding: {
+      top?: number;
+      right?: number;
+      bottom?: number;
+      left?: number;
+    } = {}
+  ) => {
     this.ui_padding = { ...this.ui_padding, ...padding };
     this.fit_pattern();
   };

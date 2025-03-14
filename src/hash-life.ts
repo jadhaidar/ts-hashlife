@@ -191,8 +191,8 @@ class HashLife {
     title,
   }: {
     pattern_text: string;
-    pattern_id: string;
-    pattern_path: string;
+    pattern_id?: string;
+    pattern_path?: string;
     title?: string;
   }) => {
     const is_mc = pattern_text.startsWith("[M2]");
@@ -245,12 +245,12 @@ class HashLife {
 
       if (pattern_id && !result.title) result.title = pattern_id;
       const pattern: Pattern = {
-        title: result.title || title || pattern_id,
+        title: result.title || title || pattern_id || "Untitled",
         author: result.author,
         rule: result.rule,
         description: result.comment,
         source_url: EXAMPLES_PATH + pattern_path,
-        view_url: pattern_path,
+        view_url: pattern_path ?? "",
         urls: result.urls,
       };
 

@@ -286,7 +286,9 @@ function generate_rle(life: any, name: string, comments: string[]): string {
   const MAX_LINE_LENGTH = 70;
 
   if (name) {
-    lines.push("#N " + name);
+    // Filter out .rle or .lif extensions from the name
+    const filteredName = name.replace(/\.(rle|lif)$/i, '');
+    lines.push("#N " + filteredName);
   }
 
   comments.forEach((c) => lines.push("#C " + c));
